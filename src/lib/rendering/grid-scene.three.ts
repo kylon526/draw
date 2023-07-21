@@ -17,6 +17,7 @@ export class GridScene {
     // Canvas properties
     private width: number;
     private height: number;
+    private origin: THREE.Vector2;
 
     // Scene Navigation
     private panning: boolean = false;
@@ -27,6 +28,8 @@ export class GridScene {
     constructor(private readonly canvas: HTMLCanvasElement) {
         this.width = window.innerWidth;
         this.height = window.innerHeight;
+
+        this.origin = new THREE.Vector2(this.width / 2, this.height / 2);
 
         this.vertices = new Float32Array([
             this.width / -2, this.height / -2, 0,
@@ -89,20 +92,25 @@ export class GridScene {
     }
 
     public zoom(event: WheelEvent): void {
-        // this.camera.zoom += event.deltaY * 0.001;
-        // this.camera.updateProjectionMatrix();
-        const oldScale = this.scale;
-        const delta = Math.sign(event.deltaY);
+        const oldYAxis = this.origin.y + this.offset.y;
+        const oldXAxis = this.origin.x - this.offset.x;
         
+        const scaledDistanceFromYAxis = (event.y - oldYAxis) / this.scale;
+        const scaledDistanceFromXAxis = (event.x - oldXAxis) / this.scale;
+        
+        const oldScale = this.scale;
+
+        const delta = Math.sign(event.deltaY);
         this.scale *= Math.exp(delta * 0.01);
+        
+        const dScale = this.scale - oldScale;
 
-        const mouseFromOrigin = this.getPointerFromOrigin(event.x, event.y);
-
-        const xOrg = mouseFromOrigin.x / oldScale;
-        const xNew = xOrg * this.scale;
-        const xDiff = mouseFromOrigin.x - xNew;
-
-        this.offset.x += xDiff;
+        const newDistanceFromYAxis = scaledDistanceFromYAxis * dScale;
+        const newDistanceFromXAxis = scaledDistanceFromXAxis * dScale;
+        
+        this.offset.x += newDistanceFromXAxis;
+        this.offset.y -= newDistanceFromYAxis;
+        
 
         this.drawGrid();
     }
