@@ -25,5 +25,6 @@
 <style lang="scss">
 	canvas {
 		display: block;
+		transform-origin: 50% 50%;
 	}
 </style>

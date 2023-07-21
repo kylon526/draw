@@ -20,7 +20,9 @@ export class GridScene {
 
     // Scene Navigation
     private panning: boolean = false;
-    private offset: THREE.Vector2 = new THREE.Vector2(0, 0);
+    private offset: THREE.Vector2 = new THREE.Vector2();
+    private scale: number = 1.0;
+    private mouse: THREE.Vector2 = new THREE.Vector2();
 
     constructor(private readonly canvas: HTMLCanvasElement) {
         this.width = window.innerWidth;
@@ -61,11 +63,23 @@ export class GridScene {
         geometry.setIndex(this.indices);
 
         gridMaterial.uniforms.translation = new THREE.Uniform(this.offset);
+        // gridMaterial.uniforms.cellSize = new THREE.Uniform(this.scale * 8.0);
+        gridMaterial.uniforms.scale = new THREE.Uniform(this.scale);
+        gridMaterial.uniforms.origin = new THREE.Uniform(new THREE.Vector2(this.width / 2, this.height / 2));
+        gridMaterial.uniforms.mouse = new THREE.Uniform(this.mouse);
+
 
         // const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
         const mesh = new THREE.Mesh(geometry, gridMaterial);
 
         this.scene.add(mesh);
+    }
+
+    private getPointerFromOrigin(x: number, y: number): THREE.Vector2 {
+        return new THREE.Vector2(
+            x - this.width / 2,
+            -y + this.height / 2
+        );
     }
 
     private render(): void {
@@ -77,18 +91,29 @@ export class GridScene {
     public zoom(event: WheelEvent): void {
         // this.camera.zoom += event.deltaY * 0.001;
         // this.camera.updateProjectionMatrix();
+        const oldScale = this.scale;
+        const delta = Math.sign(event.deltaY);
+        
+        this.scale *= Math.exp(delta * 0.01);
+
+        const mouseFromOrigin = this.getPointerFromOrigin(event.x, event.y);
+
+        const xOrg = mouseFromOrigin.x / oldScale;
+        const xNew = xOrg * this.scale;
+        const xDiff = mouseFromOrigin.x - xNew;
+
+        this.offset.x += xDiff;
+
+        this.drawGrid();
     }
 
     public pan(event: MouseEvent): void {
         if (this.panning) {
             this.offset.x -= event.movementX;
             this.offset.y += event.movementY;
+            console.log(this.offset);
             this.drawGrid();
         }
-        // if (this.panning) {
-        //     this.camera.translateX(-event.movementX);
-        //     this.camera.translateY(event.movementY);
-        // }
     }
 
     public setPanning(flag: boolean): void {

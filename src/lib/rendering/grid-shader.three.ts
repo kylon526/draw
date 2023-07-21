@@ -4,7 +4,7 @@ import { ShaderMaterial, Uniform, Vector2, Vector3 } from 'three';
 
 export const gridMaterial = new ShaderMaterial({
     uniforms: {
-        cellSize: new Uniform(8.0),
+        cellSize: new Uniform(32.0),
         translation: new Uniform( new Vector2() ),
         backgroundColor: new Uniform( new Vector3(39, 55, 77).divideScalar(255) ),
         secondaryLineColor: new Uniform( new Vector3(82, 109, 130).divideScalar(255) ),
