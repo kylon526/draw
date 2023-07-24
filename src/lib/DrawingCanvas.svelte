@@ -26,5 +26,6 @@
 	canvas {
 		display: block;
 		transform-origin: 50% 50%;
+		overflow: hidden;
 	}
 </style>

@@ -1,10 +1,13 @@
-uniform vec2 translation;
 uniform float cellSize;
-uniform vec3 backgroundColor;
-uniform vec3 secondaryLineColor;
-uniform vec2 origin;
 uniform float scale;
+
 uniform vec2 mouse;
+uniform vec2 origin;
+uniform vec2 translation;
+
+uniform vec3 backgroundColor;
+uniform vec3 primaryLineColor;
+uniform vec3 secondaryLineColor;
 
 void main() {
     vec2 pos = gl_FragCoord.xy + translation;
@@ -12,16 +15,73 @@ void main() {
 
     vec2 offsetOrigin = origin - mouse;
 
-    float modOffsetX = mod(origin.x, cellSize * scale);
-    float modOffsetY = mod(origin.y, cellSize * scale);
+    float scaledCellSize = cellSize * scale;
 
-    if (mod(pos.x - modOffsetX, cellSize * scale) < 1.0) {
-        gl_FragColor = vec4(secondaryLineColor, 1.0);
+    float modOffsetX = mod(origin.x, scaledCellSize);
+    float modOffsetY = mod(origin.y, scaledCellSize);
+
+    vec4 lineColor2x = vec4(mix(backgroundColor, secondaryLineColor, min(1.0, max(0.0, (scale - 1.0)) / 3.0)), 1.0);
+    vec4 lineColor4x = vec4(mix(backgroundColor, secondaryLineColor, min(1.0, max(0.0, (scale - 2.0)) / 6.0)), 1.0);
+    vec4 lineColor8x = vec4(mix(backgroundColor, secondaryLineColor, min(1.0, max(0.0, (scale - 4.0)) / 12.0)), 1.0);
+    vec4 lineColor16x = vec4(mix(backgroundColor, secondaryLineColor, min(1.0, max(0.0, (scale - 8.0)) / 24.0)), 1.0);
+    vec4 lineColor32x = vec4(mix(backgroundColor, secondaryLineColor, min(1.0, max(0.0, (scale - 16.0)) / 48.0)), 1.0);
+    vec4 lineColor64x = vec4(mix(backgroundColor, secondaryLineColor, min(1.0, max(0.0, (scale - 32.0)) / 96.0)), 1.0);
+
+    if (mod(pos.x - modOffsetX, scaledCellSize / 64.0) <= 1.0) {
+        gl_FragColor = lineColor32x;
     }
 
-    if (mod(pos.y - modOffsetY, cellSize * scale) < 1.0) {
-        gl_FragColor = vec4(secondaryLineColor, 1.0);
+    if (mod(pos.y - modOffsetY, scaledCellSize / 64.0) <= 1.0) {
+        gl_FragColor = lineColor32x;
     }
+
+    if (mod(pos.x - modOffsetX, scaledCellSize / 32.0) <= 1.0) {
+        gl_FragColor = lineColor32x;
+    }
+
+    if (mod(pos.y - modOffsetY, scaledCellSize / 32.0) <= 1.0) {
+        gl_FragColor = lineColor32x;
+    }
+    
+    if (mod(pos.x - modOffsetX, scaledCellSize / 16.0) <= 1.0) {
+        gl_FragColor = lineColor16x;
+    }
+
+    if (mod(pos.y - modOffsetY, scaledCellSize / 16.0) <= 1.0) {
+        gl_FragColor = lineColor16x;
+    }
+    
+    if (mod(pos.x - modOffsetX, scaledCellSize / 8.0) <= 1.0) {
+        gl_FragColor = lineColor8x;
+    }
+
+    if (mod(pos.y - modOffsetY, scaledCellSize / 8.0) <= 1.0) {
+        gl_FragColor = lineColor8x;
+    }
+
+    if (mod(pos.x - modOffsetX, scaledCellSize / 4.0) <= 1.0) {
+        gl_FragColor = lineColor4x;
+    }
+
+    if (mod(pos.y - modOffsetY, scaledCellSize / 4.0) <= 1.0) {
+        gl_FragColor = lineColor4x;
+    }
+
+    if (mod(pos.x - modOffsetX, scaledCellSize / 2.0) <= 1.0) {
+        gl_FragColor = lineColor2x;
+    }
+
+    if (mod(pos.y - modOffsetY, scaledCellSize / 2.0) <= 1.0) {
+        gl_FragColor = lineColor2x;
+    }
+
+    if (mod(pos.x - modOffsetX, scaledCellSize) < 1.0) {
+        gl_FragColor = vec4(primaryLineColor, 1.0);
+    }
+
+    if (mod(pos.y - modOffsetY, scaledCellSize) < 1.0) {
+        gl_FragColor = vec4(primaryLineColor, 1.0);
+    }  
 
     if (abs(pos.x - origin.x) < 1.0) {
         gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
@@ -30,18 +90,3 @@ void main() {
         gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
     }
 }
-
-// gl_FragCoord = (0, 0)
-// origin = (100, 100)
-// translation = (25, 25)
-
-// coordPos = (125, 125)
-
-// 0,0                100,0
-
-
-//         50,50
-
-
-
-// 0,100              100,100

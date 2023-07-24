@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { gridMaterial } from './grid-shader.three';
+import { clamp } from 'three/src/math/MathUtils';
 
 export class GridScene {
     // THREE utilities
@@ -24,10 +25,12 @@ export class GridScene {
     private offset: THREE.Vector2 = new THREE.Vector2();
     private scale: number = 1.0;
     private mouse: THREE.Vector2 = new THREE.Vector2();
+    private maxZoomOut: number = 0.3;
+    private maxZoomIn: number = 48.0;
 
     constructor(private readonly canvas: HTMLCanvasElement) {
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
+        this.width = document.documentElement.clientWidth || window.innerWidth;
+        this.height = document.documentElement.clientHeight || window.innerHeight;
 
         this.origin = new THREE.Vector2(this.width / 2, this.height / 2);
 
@@ -47,9 +50,6 @@ export class GridScene {
         this.camera.position.set(0, 0, 1);
         this.camera.lookAt(0, 0, 0);
 
-        // const grid = new Grid(this.width, this.height, 16);
-        // this.scene.add(grid.object);
-
         this.drawGrid();
 
         this.scene.add(this.camera);
@@ -62,27 +62,16 @@ export class GridScene {
         const geometry = new THREE.BufferGeometry();
 
         geometry.setAttribute('position', new THREE.BufferAttribute(this.vertices, 3));
-        // geometry.setAttribute('translation', new THREE.BufferAttribute());
         geometry.setIndex(this.indices);
 
         gridMaterial.uniforms.translation = new THREE.Uniform(this.offset);
-        // gridMaterial.uniforms.cellSize = new THREE.Uniform(this.scale * 8.0);
         gridMaterial.uniforms.scale = new THREE.Uniform(this.scale);
         gridMaterial.uniforms.origin = new THREE.Uniform(new THREE.Vector2(this.width / 2, this.height / 2));
         gridMaterial.uniforms.mouse = new THREE.Uniform(this.mouse);
 
-
-        // const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
         const mesh = new THREE.Mesh(geometry, gridMaterial);
 
         this.scene.add(mesh);
-    }
-
-    private getPointerFromOrigin(x: number, y: number): THREE.Vector2 {
-        return new THREE.Vector2(
-            x - this.width / 2,
-            -y + this.height / 2
-        );
     }
 
     private render(): void {
@@ -94,14 +83,15 @@ export class GridScene {
     public zoom(event: WheelEvent): void {
         const oldYAxis = this.origin.y + this.offset.y;
         const oldXAxis = this.origin.x - this.offset.x;
-        
+
         const scaledDistanceFromYAxis = (event.y - oldYAxis) / this.scale;
         const scaledDistanceFromXAxis = (event.x - oldXAxis) / this.scale;
         
         const oldScale = this.scale;
 
-        const delta = Math.sign(event.deltaY);
+        const delta = Math.sign(-event.deltaY);
         this.scale *= Math.exp(delta * 0.01);
+        this.scale = clamp(this.scale, this.maxZoomOut, this.maxZoomIn);
         
         const dScale = this.scale - oldScale;
 
@@ -119,7 +109,6 @@ export class GridScene {
         if (this.panning) {
             this.offset.x -= event.movementX;
             this.offset.y += event.movementY;
-            console.log(this.offset);
             this.drawGrid();
         }
     }
