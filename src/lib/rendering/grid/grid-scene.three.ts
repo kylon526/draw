@@ -1,58 +1,70 @@
-import * as THREE from 'three';
 import { gridMaterial } from './grid-shader.three';
 import { clamp } from 'three/src/math/MathUtils';
+import { Rect } from '../geometry/rect.three';
+import { Ruler } from '../rulers/ruler.three';
+import {
+	BufferAttribute,
+	BufferGeometry,
+	Mesh,
+	OrthographicCamera,
+	Scene,
+	Uniform,
+	Vector2,
+	WebGLRenderer
+} from 'three';
+import { horizontalRulerShader } from '../rulers/ruler-shader.three';
 
 export class GridScene {
 	// THREE utilities
-	private readonly renderer: THREE.WebGLRenderer;
-	private readonly scene: THREE.Scene;
-	private readonly camera: THREE.OrthographicCamera;
+	private readonly renderer: WebGLRenderer;
+	private readonly scene: Scene = new Scene();
+	private readonly camera: OrthographicCamera;
 
 	// Grid Display
 	private readonly vertices: Float32Array;
-	private readonly indices = [0, 1, 2, 2, 3, 0];
+	private readonly indices: number[];
+	private readonly hRuler: Ruler;
+	private readonly vRuler: Ruler;
 
 	// Canvas properties
 	private width: number;
 	private height: number;
-	private origin: THREE.Vector2;
+	private origin: Vector2;
 
 	// Scene Navigation
 	private panning: boolean = false;
-	private offset: THREE.Vector2 = new THREE.Vector2();
+	private offset: Vector2 = new Vector2();
 	private scale: number = 1.0;
-	private mouse: THREE.Vector2 = new THREE.Vector2();
+	private mouse: Vector2 = new Vector2();
 	private maxZoomOut: number = 0.3;
 	private maxZoomIn: number = 48.0;
 	private zoomSpeed: number = 0.1;
 
-	constructor(private readonly canvas: HTMLCanvasElement) {
+	constructor(readonly canvas: HTMLCanvasElement) {
 		this.width = document.documentElement.clientWidth || window.innerWidth;
 		this.height = document.documentElement.clientHeight || window.innerHeight;
 
-		this.origin = new THREE.Vector2(this.width / 2, this.height / 2);
+		this.origin = new Vector2(this.width / 2, this.height / 2);
 
-		this.vertices = new Float32Array([
+		const fullScreenRect = new Rect(
 			this.width / -2,
 			this.height / -2,
-			0,
 			this.width / 2,
-			this.height / -2,
-			0,
-			this.width / 2,
-			this.height / 2,
-			0,
-			this.width / -2,
-			this.height / 2,
-			0
-		]);
+			this.height / 2
+		);
 
-		this.renderer = new THREE.WebGLRenderer({ canvas });
+		this.vertices = fullScreenRect.vertices;
+		this.indices = fullScreenRect.indices;
+
+		this.hRuler = new Ruler(-1, 1 - 32 / this.height, 1, 1);
+		this.vRuler = new Ruler(-1, -1, -1 + 32 / this.width, 1);
+
+		this.renderer = new WebGLRenderer({ canvas, antialias: true });
 		this.renderer.setSize(this.width, this.height);
 
-		this.scene = new THREE.Scene();
+		this.scene = new Scene();
 
-		this.camera = new THREE.OrthographicCamera(
+		this.camera = new OrthographicCamera(
 			this.width / -2,
 			this.width / 2,
 			this.height / 2,
@@ -63,28 +75,29 @@ export class GridScene {
 
 		this.drawGrid();
 
-		this.scene.add(this.camera);
-
 		this.render();
 	}
 
 	private drawGrid() {
 		this.scene.clear();
-		const geometry = new THREE.BufferGeometry();
 
-		geometry.setAttribute('position', new THREE.BufferAttribute(this.vertices, 3));
+		const geometry = new BufferGeometry();
+
+		geometry.setAttribute('position', new BufferAttribute(this.vertices, 3));
 		geometry.setIndex(this.indices);
 
-		gridMaterial.uniforms.translation = new THREE.Uniform(this.offset);
-		gridMaterial.uniforms.scale = new THREE.Uniform(this.scale);
-		gridMaterial.uniforms.origin = new THREE.Uniform(
-			new THREE.Vector2(this.width / 2, this.height / 2)
-		);
-		gridMaterial.uniforms.mouse = new THREE.Uniform(this.mouse);
+		gridMaterial.uniforms.translation = new Uniform(this.offset);
+		gridMaterial.uniforms.scale = new Uniform(this.scale);
+		gridMaterial.uniforms.origin = new Uniform(new Vector2(this.width / 2, this.height / 2));
+		gridMaterial.uniforms.mouse = new Uniform(this.mouse);
 
-		const mesh = new THREE.Mesh(geometry, gridMaterial);
+		const mesh = new Mesh(geometry, gridMaterial);
 
 		this.scene.add(mesh);
+
+		this.hRuler.setUniform('translation', new Uniform(this.offset));
+		this.scene.add(this.hRuler.create());
+		this.scene.add(this.vRuler.create());
 	}
 
 	private render(): void {

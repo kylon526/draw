@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { GridScene } from './rendering/grid-scene.three';
+	import { GridScene } from './rendering/grid/grid-scene.three';
 
 	let canvas: HTMLCanvasElement;
 	let gridScene: GridScene;
