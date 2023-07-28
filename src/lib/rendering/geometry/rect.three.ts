@@ -3,23 +3,23 @@ export class Rect {
 	public readonly indices: number[];
 
 	constructor(
-		protected readonly left: number,
 		protected readonly top: number,
-		protected readonly right: number,
-		protected readonly bottom: number
+		protected readonly left: number,
+		protected readonly width: number,
+		protected readonly height: number
 	) {
 		this.vertices = new Float32Array([
 			left,
 			top,
 			0,
-			right,
+			left + width,
 			top,
 			0,
-			right,
-			bottom,
+			left + width,
+			top + height,
 			0,
 			left,
-			bottom,
+			top + height,
 			0
 		]);
 

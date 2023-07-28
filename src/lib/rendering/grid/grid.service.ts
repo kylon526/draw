@@ -11,10 +11,12 @@ class GridService {
 
 	public pan(e: MouseEvent): void {
 		this.gridScene?.pan(e);
+		this.gridScene?.drawGrid();
 	}
 
 	public zoom(e: WheelEvent): void {
 		this.gridScene?.zoom(e);
+		this.gridScene?.drawGrid();
 	}
 }
 

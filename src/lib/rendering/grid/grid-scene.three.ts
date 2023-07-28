@@ -1,30 +1,18 @@
 import { gridMaterial } from './grid-shader.three';
 import { clamp } from 'three/src/math/MathUtils';
 import { Rect } from '../geometry/rect.three';
-import { Ruler } from '../rulers/ruler.three';
-import {
-	BufferAttribute,
-	BufferGeometry,
-	Mesh,
-	OrthographicCamera,
-	Scene,
-	Uniform,
-	Vector2,
-	WebGLRenderer
-} from 'three';
-import { horizontalRulerShader } from '../rulers/ruler-shader.three';
+import { Mesh, OrthographicCamera, Scene, Uniform, Vector2, WebGLRenderer } from 'three';
+import { GridGeometry } from './grid-geometry';
+import { gridScale, gridTranslation } from './grid.store';
 
 export class GridScene {
 	// THREE utilities
-	private readonly renderer: WebGLRenderer;
+	private renderer: WebGLRenderer | undefined;
 	private readonly scene: Scene = new Scene();
-	private readonly camera: OrthographicCamera;
+	private camera: OrthographicCamera | undefined;
 
-	// Grid Display
-	private readonly vertices: Float32Array;
-	private readonly indices: number[];
-	private readonly hRuler: Ruler;
-	private readonly vRuler: Ruler;
+	// Grid
+	private readonly gridGeometry: GridGeometry;
 
 	// Canvas properties
 	private width: number;
@@ -32,7 +20,6 @@ export class GridScene {
 	private origin: Vector2;
 
 	// Scene Navigation
-	private panning: boolean = false;
 	private offset: Vector2 = new Vector2();
 	private scale: number = 1.0;
 	private mouse: Vector2 = new Vector2();
@@ -40,70 +27,60 @@ export class GridScene {
 	private maxZoomIn: number = 48.0;
 	private zoomSpeed: number = 0.1;
 
-	constructor(readonly canvas: HTMLCanvasElement) {
+	constructor(private readonly canvas: HTMLCanvasElement) {
 		this.width = document.documentElement.clientWidth || window.innerWidth;
 		this.height = document.documentElement.clientHeight || window.innerHeight;
 
 		this.origin = new Vector2(this.width / 2, this.height / 2);
 
-		const fullScreenRect = new Rect(
-			this.width / -2,
-			this.height / -2,
-			this.width / 2,
-			this.height / 2
-		);
-
-		this.vertices = fullScreenRect.vertices;
-		this.indices = fullScreenRect.indices;
-
-		this.hRuler = new Ruler(-1, 1 - 32 / this.height, 1, 1);
-		this.vRuler = new Ruler(-1, -1, -1 + 32 / this.width, 1);
-
-		this.renderer = new WebGLRenderer({ canvas, antialias: true });
-		this.renderer.setSize(this.width, this.height);
-
-		this.scene = new Scene();
-
-		this.camera = new OrthographicCamera(
-			this.width / -2,
-			this.width / 2,
-			this.height / 2,
-			this.height / -2
-		);
-		this.camera.position.set(0, 0, 1);
-		this.camera.lookAt(0, 0, 0);
+		this.gridGeometry = this.createGridGeometry();
+		this.createThreeScene();
 
 		this.drawGrid();
 
 		this.render();
 	}
 
-	private drawGrid() {
+	private createGridGeometry(): GridGeometry {
+		const fullScreenRect = new Rect(-1, -1, 2, 2);
+		return new GridGeometry(fullScreenRect.vertices, fullScreenRect.indices);
+	}
+
+	private createThreeScene() {
+		this.renderer = new WebGLRenderer({ canvas: this.canvas, antialias: true });
+		this.renderer.setSize(this.width, this.height);
+
+		this.camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1000);
+		this.camera.position.set(0, 0, 1);
+		this.camera.lookAt(0, 0, 0);
+	}
+
+	private render(): void {
+		this.renderer!.render(this.scene, this.camera!);
+
+		window.requestAnimationFrame(() => this.render());
+	}
+
+	public screenToGrid(mouseX: number, mouseY: number): Vector2 {
+		const virtualXOrigin = this.origin.x - this.offset.x;
+		const virtualYOrigin = this.origin.y + this.offset.y;
+
+		const scaledDistanceFromXAxis = (mouseX - virtualXOrigin) / this.scale;
+		const scaledDistanceFromYAxis = (virtualYOrigin - mouseY) / this.scale;
+		return new Vector2(Math.round(scaledDistanceFromXAxis), Math.round(scaledDistanceFromYAxis));
+	}
+
+	public drawGrid() {
 		this.scene.clear();
-
-		const geometry = new BufferGeometry();
-
-		geometry.setAttribute('position', new BufferAttribute(this.vertices, 3));
-		geometry.setIndex(this.indices);
 
 		gridMaterial.uniforms.translation = new Uniform(this.offset);
 		gridMaterial.uniforms.scale = new Uniform(this.scale);
 		gridMaterial.uniforms.origin = new Uniform(new Vector2(this.width / 2, this.height / 2));
 		gridMaterial.uniforms.mouse = new Uniform(this.mouse);
 
-		const mesh = new Mesh(geometry, gridMaterial);
+		const mesh = new Mesh(this.gridGeometry.geometry, gridMaterial);
 
 		this.scene.add(mesh);
-
-		this.hRuler.setUniform('translation', new Uniform(this.offset));
-		this.scene.add(this.hRuler.create());
-		this.scene.add(this.vRuler.create());
-	}
-
-	private render(): void {
-		this.renderer.render(this.scene, this.camera);
-
-		window.requestAnimationFrame(() => this.render());
 	}
 
 	public zoom(event: WheelEvent): void {
@@ -127,18 +104,14 @@ export class GridScene {
 		this.offset.x += newDistanceFromXAxis;
 		this.offset.y -= newDistanceFromYAxis;
 
-		this.drawGrid();
+		gridTranslation.set(this.offset);
+		gridScale.set(this.scale);
 	}
 
 	public pan(event: MouseEvent): void {
-		if (this.panning) {
-			this.offset.x -= event.movementX;
-			this.offset.y += event.movementY;
-			this.drawGrid();
-		}
-	}
+		this.offset.x -= event.movementX;
+		this.offset.y += event.movementY;
 
-	public setPanning(flag: boolean): void {
-		this.panning = flag;
+		gridTranslation.set(this.offset);
 	}
 }
