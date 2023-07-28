@@ -1,8 +1,7 @@
-import { gridMaterial } from './grid-shader.three';
+import { gridShader } from './grid-shader.three';
 import { clamp } from 'three/src/math/MathUtils';
 import { Rect } from '../geometry/rect.three';
-import { Mesh, OrthographicCamera, Scene, Uniform, Vector2, WebGLRenderer } from 'three';
-import { GridGeometry } from './grid-geometry';
+import { OrthographicCamera, Scene, Uniform, Vector2, WebGLRenderer } from 'three';
 import { gridScale, gridTranslation } from './grid.store';
 
 export class GridScene {
@@ -12,7 +11,7 @@ export class GridScene {
 	private camera: OrthographicCamera | undefined;
 
 	// Grid
-	private readonly gridGeometry: GridGeometry;
+	private readonly gridGeometry: Rect;
 
 	// Canvas properties
 	private width: number;
@@ -33,17 +32,12 @@ export class GridScene {
 
 		this.origin = new Vector2(this.width / 2, this.height / 2);
 
-		this.gridGeometry = this.createGridGeometry();
+		this.gridGeometry = new Rect(-1, -1, 2, 2);
 		this.createThreeScene();
 
 		this.drawGrid();
 
 		this.render();
-	}
-
-	private createGridGeometry(): GridGeometry {
-		const fullScreenRect = new Rect(-1, -1, 2, 2);
-		return new GridGeometry(fullScreenRect.vertices, fullScreenRect.indices);
 	}
 
 	private createThreeScene() {
@@ -73,14 +67,12 @@ export class GridScene {
 	public drawGrid() {
 		this.scene.clear();
 
-		gridMaterial.uniforms.translation = new Uniform(this.offset);
-		gridMaterial.uniforms.scale = new Uniform(this.scale);
-		gridMaterial.uniforms.origin = new Uniform(new Vector2(this.width / 2, this.height / 2));
-		gridMaterial.uniforms.mouse = new Uniform(this.mouse);
+		gridShader.uniforms.translation = new Uniform(this.offset);
+		gridShader.uniforms.scale = new Uniform(this.scale);
+		gridShader.uniforms.origin = new Uniform(new Vector2(this.width / 2, this.height / 2));
+		gridShader.uniforms.mouse = new Uniform(this.mouse);
 
-		const mesh = new Mesh(this.gridGeometry.geometry, gridMaterial);
-
-		this.scene.add(mesh);
+		this.scene.add(this.gridGeometry.createMesh(gridShader));
 	}
 
 	public zoom(event: WheelEvent): void {
